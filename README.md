@@ -101,13 +101,13 @@ Get future directions with departure time for traffic predictions.
 - `origin_latitude` (number): Origin latitude
 - `destination_longitude` (number): Destination longitude
 - `destination_latitude` (number): Destination latitude
-- `departure_time` (string): Departure time in ISO format
+- `departure_time` (string): Departure time in yyyyMMddHHmm format (e.g., "202507030900" for July 3, 2025 09:00)
 - `priority` (string, optional): Route priority ("RECOMMEND", "TIME", "DISTANCE")
 - `alternatives` (boolean, optional): Whether to return alternative routes
-- `avoid` (string, optional): Roads to avoid
-- `car_type` (number, optional): Car type (0-7)
+- `avoid` (string, optional): Roads to avoid (comma-separated: "toll", "highway", "ferry")
+- `car_type` (number, optional): Car type (0-7): 0=General car, 1=Midsize car, 2=Compact car, 3-7=Commercial vehicles
 - `car_fuel` (string, optional): Fuel type ("GASOLINE", "DIESEL", "LPG")
-- `car_hipass` (boolean, optional): Whether car has hipass
+- `car_hipass` (boolean, optional): Whether car has Hi-Pass for toll roads
 
 **Example:**
 
@@ -117,7 +117,7 @@ Get future directions with departure time for traffic predictions.
   "origin_latitude": 37.4996954,
   "destination_longitude": 127.1086228,
   "destination_latitude": 37.4012191,
-  "departure_time": "2024-12-25T09:00:00",
+  "departure_time": "202507030900",
   "priority": "TIME",
   "alternatives": true
 }
@@ -167,10 +167,18 @@ export KAKAO_REST_API_KEY="your_kakao_rest_api_key"
 **Optional Configuration:**
 
 ```bash
+# Cache and Rate Limiting
 export MCP_KAKAO_CACHE_TTL=3600          # Cache TTL in seconds (default: 3600)
 export MCP_KAKAO_RATE_LIMIT_CALLS=10     # Rate limit calls (default: 10)
-export MCP_KAKAO_RATE_LIMIT_PERIOD=1     # Rate limit period (default: 1)
+export MCP_KAKAO_RATE_LIMIT_PERIOD=1     # Rate limit period in seconds (default: 1)
 export MCP_KAKAO_CONCURRENCY_LIMIT=5     # Concurrency limit (default: 5)
+
+# Server Configuration (for HTTP transports)
+export MCP_TRANSPORT=stdio               # Transport type: stdio, streamable-http, sse
+export MCP_HOST=127.0.0.1               # Host address (default: 127.0.0.1)
+export MCP_PORT=8000                     # Port number (default: 8000)
+export MCP_PATH=/mcp                     # HTTP endpoint path (default: /mcp)
+export MCP_LOG_LEVEL=INFO                # Log level (default: INFO)
 ```
 
 ### 3. Install Dependencies
@@ -190,19 +198,28 @@ python -m src.mcp_maps.server
 ### HTTP Transport
 
 ```bash
-python -m src.mcp_maps.server --transport streamable-http --host 127.0.0.1 --port 8000
+python -m src.mcp_maps.server --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
 ```
 
 ### Server-Sent Events (SSE)
 
 ```bash
-python -m src.mcp_maps.server --transport sse --host 127.0.0.1 --port 8000
+python -m src.mcp_maps.server --transport sse --host 127.0.0.1 --port 8000 --path /mcp
 ```
 
 ### Command Line Options
 
 ```bash
 python -m src.mcp_maps.server --help
+
+Options:
+  --transport {stdio,streamable-http,sse}
+                        Transport protocol to use (default: from environment or stdio)
+  --host HOST           Host address for HTTP transports (default: from environment or 127.0.0.1)
+  --port PORT           Port for HTTP transports (default: from environment or 8000)
+  --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                        Log level for the server (default: from environment or INFO)
+  --path PATH           Path for HTTP endpoints (default: from environment or /mcp)
 ```
 
 ## Integration with AI Tools
