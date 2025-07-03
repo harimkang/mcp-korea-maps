@@ -81,40 +81,28 @@ def cleanup_resources():
     Clean up resources when the server shuts down.
     This function is called by atexit and signal handlers.
     """
-    logger.info("Cleaning up resources...")
     try:
-        # Try to get the current event loop
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            # No running loop, create a new one for cleanup
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        if loop.is_running():
-            # Schedule cleanup in the running loop
-            loop.create_task(KakaoMapsApiClient.close_all_connections())
-        else:
-            # Run cleanup in the loop
-            loop.run_until_complete(KakaoMapsApiClient.close_all_connections())
-
-        logger.info("Resources cleaned up successfully.")
-    except Exception as e:
-        logger.warning(f"Resource cleanup failed: {e}")
-        logger.info("Connections will be closed automatically by the operating system")
+        # Simple cleanup - just close connections if available
+        if (
+            hasattr(KakaoMapsApiClient, "_shared_client")
+            and KakaoMapsApiClient._shared_client
+        ):
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(KakaoMapsApiClient.close_all_connections())
+                loop.close()
+            except Exception:
+                pass  # Ignore cleanup errors
+    except Exception:
+        pass  # Ignore all cleanup errors
 
 
 def signal_handler(signum, frame):
     """Handle shutdown signals gracefully."""
     logger.info(f"Received signal {signum}, shutting down gracefully...")
     cleanup_resources()
-    os._exit(0)
-
-
-# Register cleanup handlers
-atexit.register(cleanup_resources)
-signal.signal(signal.SIGTERM, signal_handler)
-signal.signal(signal.SIGINT, signal_handler)
+    exit(0)
 
 
 # MCP Tools for Kakao Maps API
@@ -923,5 +911,11 @@ def run_server(transport: str, http_config: dict[str, Any]) -> None:
 
 
 if __name__ == "__main__":
+    # Register cleanup handlers
+    atexit.register(cleanup_resources)
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+
+    # Parse configuration and run server
     transport, http_config = parse_server_config()
     run_server(transport, http_config)

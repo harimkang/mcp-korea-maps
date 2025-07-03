@@ -249,6 +249,195 @@ Add to your Claude Desktop configuration:
 2. Configure the server endpoint
 3. Set environment variables
 
+## Docker Setup
+
+### Quick Start with Docker
+
+1. **Set up environment variables:**
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit .env file and add your Kakao API key
+# KAKAO_REST_API_KEY=your_kakao_rest_api_key_here
+```
+
+2. **Run with different transport protocols:**
+
+```bash
+# HTTP transport (default profile)
+docker-compose up
+
+# STDIO transport (for MCP client connections)
+docker-compose --profile stdio up mcp-maps-stdio
+
+# SSE transport
+docker-compose --profile sse up mcp-maps-sse
+
+# Development mode with debug logging
+docker-compose --profile dev up mcp-maps-dev
+```
+
+### Docker Compose Services
+
+#### HTTP Transport (Default)
+
+- **Container name**: `korea-maps-mcp-http`
+- **Port**: `8000`
+- **Health check**: Available at `http://localhost:8000/health`
+- **Use case**: Web applications, REST APIs
+
+```bash
+docker-compose up mcp-maps-http
+```
+
+#### STDIO Transport
+
+- **Container name**: `korea-maps-mcp-stdio`
+- **Use case**: Direct MCP client connections (Claude Desktop, etc.)
+
+```bash
+docker-compose --profile stdio up mcp-maps-stdio
+```
+
+#### SSE Transport
+
+- **Container name**: `korea-maps-mcp-sse`
+- **Port**: `8080`
+- **Use case**: Real-time applications with Server-Sent Events
+
+```bash
+docker-compose --profile sse up mcp-maps-sse
+```
+
+#### Development Mode
+
+- **Container name**: `korea-maps-mcp-dev`
+- **Port**: `3000`
+- **Features**: Debug logging, volume mounting for logs
+- **Path**: `/api/mcp` (different from production)
+
+```bash
+docker-compose --profile dev up mcp-maps-dev
+```
+
+### Docker Environment Variables
+
+All services support the following environment variables:
+
+```bash
+# Required
+KAKAO_REST_API_KEY=your_api_key
+
+# Optional - Cache and Rate Limiting
+MCP_KAKAO_CACHE_TTL=3600          # Cache TTL in seconds
+MCP_KAKAO_RATE_LIMIT_CALLS=10     # Rate limit calls per period
+MCP_KAKAO_RATE_LIMIT_PERIOD=1     # Rate limit period in seconds
+MCP_KAKAO_CONCURRENCY_LIMIT=5     # Max concurrent requests
+
+# Optional - Server Configuration (HTTP/SSE only)
+MCP_TRANSPORT=streamable-http     # Transport type
+MCP_HOST=0.0.0.0                 # Host address
+MCP_PORT=8000                     # Port number
+MCP_PATH=/mcp                     # HTTP endpoint path
+MCP_LOG_LEVEL=INFO                # Log level
+```
+
+### Building Custom Docker Image
+
+```bash
+# Build with default settings
+docker build -t korea-maps-mcp .
+
+# Build with custom configuration
+docker build \
+  --build-arg MCP_TRANSPORT=streamable-http \
+  --build-arg MCP_PORT=8080 \
+  --build-arg MCP_LOG_LEVEL=DEBUG \
+  -t korea-maps-mcp:custom .
+
+# Run the custom image
+docker run -e KAKAO_REST_API_KEY="your_api_key" -p 8080:8080 korea-maps-mcp:custom
+```
+
+### Docker Setup Script
+
+A convenient setup script is provided to simplify Docker operations:
+
+```bash
+# Make the script executable (first time only)
+chmod +x docker-setup.sh
+
+# Build the Docker image
+./docker-setup.sh build
+
+# Run HTTP service
+./docker-setup.sh http
+
+# Run development service
+./docker-setup.sh dev
+
+# Test health endpoint
+./docker-setup.sh test
+
+# View logs
+./docker-setup.sh logs
+
+# Stop all services
+./docker-setup.sh stop
+
+# Clean up everything
+./docker-setup.sh clean
+
+# Show help
+./docker-setup.sh help
+```
+
+The script automatically:
+
+- Checks for `.env` file and creates it from `.env.example` if missing
+- Validates that `KAKAO_REST_API_KEY` is set
+- Provides easy commands for common Docker operations
+- Includes health checking and log viewing
+
+### Docker Health Checks
+
+All HTTP and SSE services include health checks:
+
+```bash
+# Check service health
+docker-compose ps
+
+# View health check logs
+docker-compose logs mcp-maps-http
+
+# Manual health check
+curl http://localhost:8000/health
+```
+
+### Claude Desktop with Docker
+
+For Claude Desktop integration with Docker:
+
+```json
+{
+  "mcpServers": {
+    "korea-maps": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--env-file",
+        "/path/to/your/.env",
+        "korea-maps-mcp"
+      ]
+    }
+  }
+}
+```
+
 ## API Rate Limits
 
 The server includes built-in rate limiting and caching to respect Kakao API quotas:

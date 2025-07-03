@@ -1,0 +1,112 @@
+version: "3.8"
+
+services:
+  # Default stdio transport (for MCP client connections)
+  mcp-maps-stdio:
+    build: .
+    container_name: korea-maps-mcp-stdio
+    environment:
+      - KAKAO_REST_API_KEY=${KAKAO_REST_API_KEY}
+      - MCP_TRANSPORT=stdio
+      - MCP_LOG_LEVEL=INFO
+      # Optional Kakao API configuration
+      - MCP_KAKAO_CACHE_TTL=3600
+      - MCP_KAKAO_RATE_LIMIT_CALLS=10
+      - MCP_KAKAO_RATE_LIMIT_PERIOD=1
+      - MCP_KAKAO_CONCURRENCY_LIMIT=5
+    profiles:
+      - stdio
+
+  # HTTP transport for web applications
+  mcp-maps-http:
+    build:
+      context: .
+      args:
+        - MCP_TRANSPORT=streamable-http
+        - MCP_HOST=0.0.0.0
+        - MCP_PORT=8000
+        - MCP_PATH=/mcp
+        - MCP_LOG_LEVEL=INFO
+    container_name: korea-maps-mcp-http
+    ports:
+      - "8000:8000"
+    environment:
+      - KAKAO_REST_API_KEY=${KAKAO_REST_API_KEY}
+      # Optional Kakao API configuration
+      - MCP_KAKAO_CACHE_TTL=3600
+      - MCP_KAKAO_RATE_LIMIT_CALLS=10
+      - MCP_KAKAO_RATE_LIMIT_PERIOD=1
+      - MCP_KAKAO_CONCURRENCY_LIMIT=5
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    profiles:
+      - http
+      - default
+
+  # SSE transport for real-time applications
+  mcp-maps-sse:
+    build:
+      context: .
+      args:
+        - MCP_TRANSPORT=sse
+        - MCP_HOST=0.0.0.0
+        - MCP_PORT=8080
+        - MCP_PATH=/mcp
+        - MCP_LOG_LEVEL=INFO
+    container_name: korea-maps-mcp-sse
+    ports:
+      - "8080:8080"
+    environment:
+      - KAKAO_REST_API_KEY=${KAKAO_REST_API_KEY}
+      # Optional Kakao API configuration
+      - MCP_KAKAO_CACHE_TTL=3600
+      - MCP_KAKAO_RATE_LIMIT_CALLS=10
+      - MCP_KAKAO_RATE_LIMIT_PERIOD=1
+      - MCP_KAKAO_CONCURRENCY_LIMIT=5
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    profiles:
+      - sse
+
+  # Development setup with debug logging
+  mcp-maps-dev:
+    build:
+      context: .
+      args:
+        - MCP_TRANSPORT=streamable-http
+        - MCP_HOST=0.0.0.0
+        - MCP_PORT=3000
+        - MCP_PATH=/api/mcp
+        - MCP_LOG_LEVEL=DEBUG
+    container_name: korea-maps-mcp-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - KAKAO_REST_API_KEY=${KAKAO_REST_API_KEY}
+      # Kakao Maps API settings for development
+      - MCP_KAKAO_CACHE_TTL=1800 # 30 minutes for development
+      - MCP_KAKAO_RATE_LIMIT_CALLS=15
+      - MCP_KAKAO_RATE_LIMIT_PERIOD=1
+      - MCP_KAKAO_CONCURRENCY_LIMIT=10
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    profiles:
+      - dev
+
+networks:
+  default:
+    name: korea-maps-mcp-network
